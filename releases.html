@@ -249,6 +249,33 @@
 <h3 id="unreleased-compatibility-notes"><a class="header" href="#unreleased-compatibility-notes">Unreleased compatibility notes</a></h3>
 <ul>
 <li>
+<p><strong>Table purge is required on catalogs.</strong> The <code>catalog.Catalog</code> interface now embeds <code>catalog.PurgeableCatalog</code>; every custom catalog implementation must provide <code>PurgeTable(ctx, identifier) error</code>. The narrow <code>catalog.PurgeableTable</code> interface is renamed to <code>catalog.PurgeableCatalog</code>. Built-in purge behavior is unchanged.</p>
+</li>
+<li>
+<p><strong>Unify statistics blob types with Puffin.</strong> Replace <code>table.BlobType</code> with <code>puffin.BlobType</code> when constructing <code>table.BlobMetadata</code>. Replace <code>table.BlobTypeApacheDatasketchesThetaV1</code> with <code>puffin.BlobTypeDataSketchesTheta</code> and <code>table.BlobTypeDeletionVectorV1</code> with <code>puffin.BlobTypeDeletionVector</code>. Use <code>puffin.BlobType.IsKnown()</code> to identify the types defined by the Puffin specification; the redundant <code>table.BlobType.IsValid()</code> method is removed. Unknown non-empty blob type names still round-trip through table metadata.</p>
+</li>
+<li>
+<p><strong>View representation field uses the Go SQL initialism.</strong> Replace <code>view.Representation.Sql</code> with <code>view.Representation.SQL</code>. Serialized view metadata still uses the <code>sql</code> JSON field.</p>
+</li>
+<li>
+<p><strong>Orphan cleanup results now expose only <code>OrphanFiles</code>.</strong> Replace <code>result.OrphanFileLocations</code> with <code>result.OrphanFiles</code> (each entry has <code>Path</code> and <code>SizeBytes</code>). <code>OrphanCleanupPlan.Files()</code> still provides path-only lists during planning.</p>
+</li>
+<li>
+<p><strong>Catalog identifier helper renamed.</strong> <code>catalog.TableNameFromIdent</code> is removed. Use <code>catalog.ObjectNameFromIdent</code> for tables, views, and functions.</p>
+</li>
+<li>
+<p><strong>Substrait expression conversion no longer takes case sensitivity.</strong> <code>substrait.ConvertExpr(schema, expression, caseSensitive)</code> becomes <code>substrait.ConvertExpr(schema, expression)</code>. Case sensitivity remains part of expression binding.</p>
+</li>
+<li>
+<p><strong>Transform formatting requires the result type.</strong> <code>Transform.ToHumanStr(value)</code> is removed. Use <code>Transform.ToHumanStrType(resultType, value)</code> to format partition values, including timestamps with time zones.</p>
+</li>
+<li>
+<p><strong>Catalogs now require cleanup.</strong> The <code>catalog.Catalog</code> interface includes <code>Close() error</code>. Custom catalog implementations must provide <code>Close</code>, and callers should close catalog instances after use. <code>catalog.Closer</code> remains available as an alias for <code>io.Closer</code>.</p>
+</li>
+<li>
+<p><strong>Puffin writer property setter renamed.</strong> <code>puffin.Writer.AddProperties</code> is now <code>puffin.Writer.SetProperties</code>. Repeated calls still merge keys; use <code>ClearProperties</code> to clear custom properties before finishing.</p>
+</li>
+<li>
 <p><strong>Orphan file cleanup moved to <code>table/maintenance</code>.</strong> The orphan-cleanup and file-purge API is no longer on <code>table.Table</code>; it now lives in the <code>table/maintenance</code> package as free functions that take the table as their first argument (matching <code>table/compaction</code>). For example, <code>tbl.DeleteOrphanFiles(ctx, ...)</code> becomes <code>maintenance.DeleteOrphanFiles(ctx, tbl, ...)</code>. Because <code>table/maintenance</code> imports <code>table</code> (and not the reverse), this cannot be offered as a deprecation shim on <code>table.Table</code> without an import cycle, so callers must switch to the new package. The following moved from <code>table</code> to <code>table/maintenance</code>:</p>
 <ul>
 <li>Functions (now free functions taking <code>*table.Table</code>): <code>DeleteOrphanFiles</code>, <code>PlanOrphanFiles</code>, <code>ExecuteOrphanCleanup</code>, <code>PurgeFiles</code>.</li>
@@ -259,7 +286,13 @@
 <p>Relatedly, the previously unexported <code>isGCEnabled</code> is now <code>table.IsGCEnabled</code>, so the new package can gate destructive operations on the <code>gc.enabled</code> table property.</p>
 </li>
 <li>
+<p><strong>Data-file replacement methods renamed.</strong> Use <code>ReplaceDataFilesByPath</code> for string paths. Use <code>ReplaceDataFiles</code> for prebuilt <code>DataFile</code> values instead of <code>ReplaceDataFilesWithDataFiles</code>.</p>
+</li>
+<li>
 <p><code>maintenance.PurgeFiles</code> (previously <code>Table.PurgeFiles</code>) now calls <code>IO.Remove</code> concurrently, with up to 32 calls in flight, when the filesystem does not implement <code>BulkRemovableIO</code>. Custom IO implementations, including those registered with <code>io.Register</code>, must make <code>Remove</code> safe for concurrent use and synchronize any shared mutable state. The bulk deletion path is unchanged.</p>
+</li>
+<li>
+<p><strong>Partition and sort source accessors renamed.</strong> Replace <code>PartitionField.SourceID()</code> and <code>SortField.SourceID()</code> with <code>FirstSourceID()</code>. Their behavior and serialized fields are unchanged.</p>
 </li>
 </ul>
 <h2 id="verifying-and-producing-releases"><a class="header" href="#verifying-and-producing-releases">Verifying and producing releases</a></h2>
